@@ -16,6 +16,8 @@ import { Balloon } from '../components/Balloon';
 import { SmallCloud } from '../components/SmallCloud';
 import type { Camera } from '../components/Camera';
 import { GameOverScreen } from '../components/ui/GameOverScreen';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { PlayButton } from '../components/ui/PlayButton';
 
 import { assetsManager } from './AssetsManager';
 
@@ -54,12 +56,15 @@ export class GameManager {
   private bunnyTexture?: Texture;
 
   private gameOverScreen!: GameOverScreen;
+  private progressBar!: ProgressBar;
   private startButton?: Container;
+  private playButton!: PlayButton;
 
   private timelineData: RecordData[] = [];
   private setupData?: RecordData;
 
   preFrameTime = 1000 / 120;
+  preFrameTimeSec = this.preFrameTime / 1000;
   needLerp = false;
 
   isPlaying = false;
@@ -78,7 +83,8 @@ export class GameManager {
   }
 
   get currentFrameIndex(): number {
-    return Math.floor(this.progress * this.timelineData.length);
+    const index = Math.floor(this.progress * this.timelineData.length);
+    return Math.min(index, this.timelineData.length - 1);
   }
 
   get currentFrame(): RecordData | undefined {
@@ -110,6 +116,37 @@ export class GameManager {
       this.restartGame();
     });
     this.app.stage.addChild(this.gameOverScreen);
+
+    // Init ProgressBar
+    this.progressBar = new ProgressBar();
+    this.progressBar.resize(this.app.screen.width, this.app.screen.height);
+    this.app.stage.addChild(this.progressBar);
+
+    this.progressBar.on('seekStart', () => {
+      this.pause();
+    });
+
+    this.progressBar.on('seek', (progress: number) => {
+      this.progress = progress;
+      this.playFrame(this.currentFrame);
+      if (this.character) {
+        this.viewport.moveCenter(this.character.position);
+      }
+    });
+
+    this.progressBar.on('seekEnd', () => {
+      // this.play();
+    });
+
+    this.playButton = new PlayButton();
+    this.playButton.position.set(this.app.screen.width / 2, this.app.screen.height / 2);
+    this.app.stage.addChild(this.playButton);
+
+    // Handle resize
+    this.app.renderer.on('resize', () => {
+      this.gameOverScreen.resize(this.app.screen.width, this.app.screen.height);
+      this.progressBar.resize(this.app.screen.width, this.app.screen.height);
+    });
 
     this.showStartScreen();
 
@@ -165,6 +202,7 @@ export class GameManager {
 
   public updatePreFrameTime(time: number) {
     this.preFrameTime = time;
+    this.preFrameTimeSec = time / 1000;
     if (this.isPlaying) {
       this.play();
     }
@@ -172,6 +210,8 @@ export class GameManager {
 
   public async play() {
     if (!this.character) return;
+
+    this.playButton.hide();
 
     if (this.playFn) {
       Ticker.shared.remove(this.playFn);
@@ -195,6 +235,7 @@ export class GameManager {
   }
   public pause() {
     if (!this.playFn || !this.isPlaying) return;
+    this.playButton.show();
 
     Ticker.shared.remove(this.playFn);
     this.isPlaying = false;
@@ -203,13 +244,14 @@ export class GameManager {
     const prevFrameIndex = this.currentFrameIndex;
 
     this.progress = Math.min(Math.max(progress, 0), 1);
+    this.progressBar.progress = this.progress;
 
     if (prevFrameIndex === this.currentFrameIndex) {
       return;
     }
 
     this.playFrame(this.currentFrame);
-    if (this.progress === 1) {
+    if (this.progress > 0.999) {
       Ticker.shared.remove(this.playFn!);
       this.onGameOver();
     }
@@ -228,15 +270,13 @@ export class GameManager {
       const entity = this.entityMap.get(id!);
       if (!entity || entity.destroyed) continue;
 
-      const gsapDuration = this.preFrameTime / 1000;
-
       if (x !== undefined) {
         if (!this.needLerp) {
           entity.position.x = x;
         } else {
           gsap.to(entity, {
             x: x,
-            duration: gsapDuration,
+            duration: this.preFrameTimeSec,
             ease: 'linear',
           });
         }
@@ -247,7 +287,7 @@ export class GameManager {
         } else {
           gsap.to(entity, {
             y: y,
-            duration: gsapDuration,
+            duration: this.preFrameTimeSec,
             ease: 'linear',
           });
         }
@@ -271,7 +311,7 @@ export class GameManager {
         } else {
           gsap.to(target, {
             rotation: rotation,
-            duration: gsapDuration,
+            duration: this.preFrameTimeSec,
             ease: 'linear',
           });
         }
@@ -418,8 +458,6 @@ export class GameManager {
   }
 
   private clearEntities() {
-    console.log('clearEntities', this.entities.length);
-
     this.entities.forEach((e) => {
       e.destroy();
     });
