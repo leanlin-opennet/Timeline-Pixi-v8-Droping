@@ -60,6 +60,7 @@ export class GameManager {
   private setupData?: RecordData;
 
   preFrameTime = 1000 / 120;
+  needLerp = false;
 
   isPlaying = false;
   playFn?: (ticker: Ticker) => void;
@@ -100,6 +101,8 @@ export class GameManager {
     this.bunnyTexture = Assets.get('bunny');
 
     this.createWalls();
+
+    this.setupTimeline(testingTimelineData);
 
     // Init UI
     this.gameOverScreen = new GameOverScreen();
@@ -183,6 +186,9 @@ export class GameManager {
     this.playFn = (_ticker: Ticker) => {
       elapsed = performance.now() - startTime;
       const progress = elapsed / totalTime;
+      if (this.character) {
+        this.viewport.moveCenter(this.character.position);
+      }
       this.updateProgress(progress);
     };
     Ticker.shared.add(this.playFn);
@@ -222,11 +228,29 @@ export class GameManager {
       const entity = this.entityMap.get(id!);
       if (!entity || entity.destroyed) continue;
 
+      const gsapDuration = this.preFrameTime / 1000;
+
       if (x !== undefined) {
-        entity.position.x = x;
+        if (!this.needLerp) {
+          entity.position.x = x;
+        } else {
+          gsap.to(entity, {
+            x: x,
+            duration: gsapDuration,
+            ease: 'linear',
+          });
+        }
       }
       if (y !== undefined) {
-        entity.position.y = y;
+        if (!this.needLerp) {
+          entity.position.y = y;
+        } else {
+          gsap.to(entity, {
+            y: y,
+            duration: gsapDuration,
+            ease: 'linear',
+          });
+        }
       }
       if (scaleX !== undefined) {
         entity.scale.x = scaleX;
@@ -235,10 +259,21 @@ export class GameManager {
         entity.scale.y = scaleY;
       }
       if (rotation !== undefined) {
+        let target: Container;
         if (entity instanceof Character) {
-          entity.sprite.rotation = rotation;
+          target = entity.sprite;
         } else {
-          entity.rotation = rotation;
+          target = entity;
+        }
+
+        if (!this.needLerp) {
+          target.rotation = rotation;
+        } else {
+          gsap.to(target, {
+            rotation: rotation,
+            duration: gsapDuration,
+            ease: 'linear',
+          });
         }
       }
 
@@ -252,20 +287,24 @@ export class GameManager {
     }
   }
 
-  private setupTimeline(timelineData: RecordData[]) {
+  public setupTimeline(timelineData: RecordData[]) {
     const [firstFrame, ...rest] = timelineData;
+
+    if (!firstFrame || rest.length === 0) return;
+
+    // this.clearEntities();
 
     this.setupData = firstFrame;
     this.timelineData = rest;
-
-    this.progress = 0;
-    this.isPlaying = false;
-    this.setupScene();
+    // this.setupScene();
   }
 
   private startGame() {
-    this.setupTimeline(testingTimelineData);
+    this.clearEntities();
     this.viewport.on('pointerdown', this.togglePlayEvent, this);
+    this.progress = 0;
+
+    this.setupScene();
     this.spawnCharacter();
     this.play();
   }
@@ -364,12 +403,13 @@ export class GameManager {
       this.gameOverScreen.resize(this.app.screen.width, this.app.screen.height);
       this.gameOverScreen.visible = true;
 
+      this.isPlaying = false;
+
       this.app.stage.addChild(this.gameOverScreen);
     }
   }
 
   private togglePlayEvent() {
-    console.log('togglePlayEvent', this.isPlaying);
     if (this.isPlaying) {
       this.pause();
     } else {
@@ -377,12 +417,9 @@ export class GameManager {
     }
   }
 
-  private restartGame() {
-    if (this.gameOverScreen) {
-      this.gameOverScreen.visible = false;
-    }
+  private clearEntities() {
+    console.log('clearEntities', this.entities.length);
 
-    // Clear entities
     this.entities.forEach((e) => {
       e.destroy();
     });
@@ -392,8 +429,15 @@ export class GameManager {
       this.character.destroy({ children: true });
       this.character = undefined;
     }
+  }
 
-    // Restart logic
+  private restartGame() {
+    if (this.gameOverScreen) {
+      this.gameOverScreen.visible = false;
+    }
+
+    this.clearEntities();
+
     this.startGame();
   }
 }
