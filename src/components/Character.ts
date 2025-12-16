@@ -3,25 +3,12 @@ import {
   Sprite,
   type ContainerOptions,
   type Texture,
-  type DestroyOptions,
   Text,
   type TextStyleOptions,
 } from 'pixi.js';
 
 import { gsap } from 'gsap';
 import type { Viewport } from 'pixi-viewport';
-
-const _Score = {
-  y: {
-    min: 300,
-    step: 10,
-    amount: 0.01,
-  },
-  angle: {
-    step: Math.PI * 2,
-    amount: 0.3,
-  },
-} as const;
 
 export class Character extends Container {
   sprite: Sprite;
@@ -54,30 +41,6 @@ export class Character extends Container {
     this._startY = this.position.y;
 
     this.hints = new FadeHints();
-
-    // body.onAfterUpdate = () => {
-    //   this.position.copyFrom(body.position);
-    //   this.sprite.rotation = body.angle;
-
-    //   this._totalY = Math.max(this._totalY, Math.abs(body.position.y - this._startY));
-    //   this._totalAngle += body.angle - this._prevAngle;
-    //   this._prevAngle = body.angle;
-    //   if (Math.abs(this._totalAngle) > Score.angle.step) {
-    //     const direction = this._totalAngle > 0 ? 'Left' : 'Right';
-    //     this.hints.addHint(`Flip ${direction} !`);
-    //     this._flipCount++;
-    //     this._totalAngle = 0;
-    //   }
-    //   this.updateScore();
-
-    //   if (this._camera) {
-    //     this._camera.moveCenter(this.position);
-    //   }
-    //   if (this.stopped || this.position.y > 4000) {
-    //     this._camera = undefined;
-    //     this.emit('stopped');
-    //   }
-    // };
 
     this.scoreText = new Text({
       text: '0',

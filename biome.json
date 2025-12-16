@@ -33,6 +33,9 @@
         "noUnusedPrivateClassMembers": {
           "fix": "none"
         }
+      },
+      "style": {
+        "noNonNullAssertion": "off"
       }
     }
   },

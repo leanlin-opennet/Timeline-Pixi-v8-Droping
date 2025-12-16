@@ -1,4 +1,4 @@
-import { Container, Graphics, type ContainerOptions, type DestroyOptions } from 'pixi.js';
+import { Container, Graphics, type ContainerOptions } from 'pixi.js';
 
 export class Balloon extends Container {
   private graphics: Graphics;
