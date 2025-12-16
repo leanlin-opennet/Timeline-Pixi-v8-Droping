@@ -1,0 +1,26 @@
+{
+  "name": "matter-pixi-v8",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npm run dev",
+    "build": "npm run lint && tsc && vite build",
+    "lint": "biome check .",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@esotericsoftware/spine-pixi-v8": "^4.2.96",
+    "gsap": "^3.14.1",
+    "pixi-viewport": "^6.0.3",
+    "pixi.js": "^8.14.3",
+    "throttle-debounce": "^5.0.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.8",
+    "@types/node": "^25.0.0",
+    "@types/throttle-debounce": "^5.0.2",
+    "typescript": "~5.7.3",
+    "vite": "^6.2.0"
+  }
+}
